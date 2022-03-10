@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="D:/Downloads_G/New Orders.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="150"/><column_width id="3" width="2941"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,7:mainADDRESS"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="ADDRESS" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="147"/><column index="2" value="300"/><column index="3" value="300"/><column index="4" value="170"/><column index="5" value="147"/><column index="6" value="105"/><column index="7" value="110"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="PRODUCT" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort><column index="1" mode="0"/></sort><column_widths><column index="1" value="148"/><column index="2" value="300"/><column index="3" value="255"/><column index="4" value="186"/><column index="5" value="300"/><column index="6" value="61"/><column index="7" value="85"/><column index="8" value="91"/><column index="9" value="97"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="PRODUCT_CLASS" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="255"/><column index="2" value="253"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1">/*Question 1*/
+select PRODUCT_ID, PRODUCT_DESC, PRODUCT_CLASS_CODE, 
+CASE PRODUCT_CLASS_CODE
+WHEN 2050 THEN PRODUCT_PRICE + 2000
+WHEN 2051 THEN PRODUCT_PRICE + 500
+WHEN 2052 THEN PRODUCT_PRICE + 600
+ELSE PRODUCT_PRICE
+END AS PRODUCT_PRICE 
+FROM PRODUCT 
+ORDER by PRODUCT_CLASS_CODE DESC;
+
+/*Question 2*/
+SELECT A.PRODUCT_ID, A.PRODUCT_DESC, A.PRODUCT_CLASS_CODE, B.PRODUCT_CLASS_DESC, A.PRODUCT_QUANTITY_AVAIL, 
+CASE 
+WHEN A.PRODUCT_QUANTITY_AVAIL &lt;= 0
+THEN 'Out of stock'
+WHEN B.PRODUCT_CLASS_DESC = 'Electronics' 
+OR B.PRODUCT_CLASS_DESC = 'Computer'
+THEN 
+CASE 
+WHEN A.PRODUCT_QUANTITY_AVAIL &lt;= 10 
+THEN 'Low stock'
+WHEN A.PRODUCT_QUANTITY_AVAIL &gt;= 11 OR A.PRODUCT_QUANTITY_AVAIL &lt;= 30 
+THEN 'In stock' 
+WHEN A.PRODUCT_QUANTITY_AVAIL &gt;= 31 
+THEN 'Enough stock'
+END 
+WHEN B.PRODUCT_CLASS_DESC = 'Stationery'
+OR B.PRODUCT_CLASS_DESC = 'Clothes'
+THEN 
+CASE 
+WHEN A.PRODUCT_QUANTITY_AVAIL &lt;= 20 
+THEN 'Low stock'
+WHEN A.PRODUCT_QUANTITY_AVAIL &gt;= 21 AND A.PRODUCT_QUANTITY_AVAIL &lt;= 80
+THEN 'In stock'
+WHEN A.PRODUCT_QUANTITY_AVAIL &gt;= 81 
+THEN 'Enough stock' 
+END 
+WHEN A.PRODUCT_QUANTITY_AVAIL &lt;= 15
+THEN 'Low stock'
+WHEN A.PRODUCT_QUANTITY_AVAIL &gt;= 16 AND A.PRODUCT_QUANTITY_AVAIL &lt;= 50
+THEN 'In stock'
+WHEN A.PRODUCT_QUANTITY_AVAIL &gt;= 51 
+THEN 'Enough stock' 
+END AS INVENTORY_STATUS
+FROM PRODUCT AS A
+INNER JOIN PRODUCT_CLASS AS B ON A.PRODUCT_CLASS_CODE = B.PRODUCT_CLASS_CODE
+ORDER BY B.PRODUCT_CLASS_DESC;
+
+/*Question 3*/
+SELECT COUNTRY, COUNT(CITY) AS CITY_COUNT
+FROM ADDRESS
+WHERE  COUNTRY NOT IN('USA', 'Malaysia')
+GROUP BY COUNTRY
+HAVING COUNT(CITY) &gt; 1
+ORDER by CITY_COUNT DESC;
+
+/*Question 4*/
+SELECT A.CUSTOMER_ID,A.CUSTOMER_FNAME || ' ' || A.CUSTOMER_LNAME AS [CUSTOMER_FULL_NAME],
+B.CITY,B.PINCODE,C.ORDER_ID,F.PRODUCT_CLASS_DESC,E.PRODUCT_DESC,
+D.PRODUCT_QUANTITY * E.PRODUCT_PRICE AS [SUB_TOTAL]
+FROM ONLINE_CUSTOMER A
+INNER JOIN ADDRESS B ON A.ADDRESS_ID = B.ADDRESS_ID
+INNER JOIN ORDER_HEADER C ON A.CUSTOMER_ID = C.CUSTOMER_ID
+INNER JOIN ORDER_ITEMS D ON C.ORDER_ID = D.ORDER_ID
+INNER JOIN PRODUCT E ON D.PRODUCT_ID = E.PRODUCT_ID
+INNER JOIN PRODUCT_CLASS F ON E.PRODUCT_CLASS_CODE = F.PRODUCT_CLASS_CODE
+WHERE B.PINCODE NOT LIKE '%0%'
+ORDER BY [CUSTOMER_FULL_NAME],[SUB_TOTAL];
+
+/*Question 5*/
+SELECT A.PRODUCT_ID,A.PRODUCT_DESC,SUM(B.PRODUCT_QUANTITY) AS [QTY]
+FROM PRODUCT A
+INNER JOIN ORDER_ITEMS B ON A.PRODUCT_ID = B.PRODUCT_ID
+WHERE B.ORDER_ID IN (SELECT ORDER_ID FROM ORDER_ITEMS WHERE PRODUCT_ID = 201)
+GROUP BY A.PRODUCT_ID,A.PRODUCT_DESC
+ORDER BY [QTY] DESC
+LIMIT 1;
+
+/*Question 6*/
+SELECT A.CUSTOMER_ID,A.CUSTOMER_FNAME || ' ' || A.CUSTOMER_LNAME AS [CUSTOMER_FULL_NAME],
+A.CUSTOMER_EMAIL,B.ORDER_ID,D.PRODUCT_DESC,C.PRODUCT_QUANTITY,(C.PRODUCT_QUANTITY * D.PRODUCT_PRICE) AS [SUB_TOTAL]
+FROM ONLINE_CUSTOMER A
+LEFT JOIN ORDER_HEADER B ON A.CUSTOMER_ID = B.CUSTOMER_ID
+LEFT JOIN ORDER_ITEMS C ON B.ORDER_ID = C.ORDER_ID
+LEFT JOIN PRODUCT D ON C.PRODUCT_ID = D.PRODUCT_ID;</sql><current_tab id="0"/></tab_sql></sqlb_project>
